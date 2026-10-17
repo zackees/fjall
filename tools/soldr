@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Local fast-build entry point for the fork. Keep the toolchain fixed so Soldr's
+# content-addressed compiler cache can be reused across check/build/test runs.
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+export RUSTUP_TOOLCHAIN="${RUSTUP_TOOLCHAIN:-1.94.1}"
+
+# Link-heavy test runs are faster with mold. Keep this conditional so macOS,
+# Windows, and Linux hosts without mold use their normal linker.
+if [[ "$(uname -s)" == Linux ]] && command -v mold >/dev/null 2>&1; then
+    export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-fuse-ld=mold"
+fi
+
+exec soldr cargo "$@"
